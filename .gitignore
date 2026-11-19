@@ -1,0 +1,15 @@
+# Local runtime and credentials
+.env
+.env.*
+*.pfx
+*.p12
+*.key
+*.exe
+*.dll
+*.sys
+__pycache__/
+.build-private/
+cache/
+diagnostics/
+src/dist/capture.json
+src/dist/license.json
