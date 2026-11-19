@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "public_origin": "https://118.25.176.85",
+  "app_id": 0,
+  "guyi_project": "/opt/guyi-access/current",
+  "php_binary": "/usr/bin/php8.2",
+  "security_epoch": 1
+}

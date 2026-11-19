@@ -1,0 +1,19 @@
+#!/bin/sh
+# Deployment rollback ONLY. Not the four-role source ZIP rollback script.
+set -eu
+umask 077
+if [ "$#" -ne 3 ] || { [ "$3" != '--plan' ] && [ "$3" != '--apply' ]; }; then
+    printf '%s\n' 'Usage: rollback-release.sh EXPECTED_CURRENT_SHA256 TARGET_MANIFEST_SHA256 --plan|--apply' >&2
+    exit 2
+fi
+# A data-only pointer change bypasses the coherent backend/config transaction.
+# Keep the old entry point read-only; all writes use separately approved rollout.py.
+if [ "$3" = '--apply' ]; then
+    printf '%s\n' 'COHERENT_ROLLOUT_REQUIRED: use the separately approved rollout transaction; nothing changed.' >&2
+    exit 2
+fi
+check=/opt/gamesense-radar/admin/release_check.py
+# Verifier independently checks root ownership, current pointer, matching policy,
+# pinned Ed25519 signatures AND approved hashes, exact artifact hashes and no
+# symlinked code files. An approval entry alone never permits an unsigned release.
+exec /usr/bin/python3 "$check" "$1" "$2"

@@ -1,0 +1,44 @@
+{
+  "id": "de_nuke",
+  "display_name": "核子危机",
+  "aliases": [
+    "nuke",
+    "核子危机",
+    "核弹",
+    "核子"
+  ],
+  "material": "",
+  "ref_width": 1024,
+  "ref_height": 1024,
+  "origin_world_x": -3290.0,
+  "origin_world_y": 1157.52,
+  "units_per_pixel": 6.98,
+  "world_bounds": {
+    "min_x": -3290.0,
+    "min_y": -5990.0,
+    "max_x": 3857.52,
+    "max_y": 1157.52
+  },
+  "levels": [
+    {
+      "id": "main",
+      "name": "主层",
+      "z_min": -480.0,
+      "z_max": -20.0
+    },
+    {
+      "id": "split1",
+      "name": "分层 1",
+      "z_min": -770.0,
+      "z_max": -480.0
+    }
+  ],
+  "anchors": [],
+  "calibration": {
+    "source": "cs2_webradar/meta.json5",
+    "verified": false,
+    "points": 0,
+    "coverage": 0.0,
+    "note": "标定取自上游 meta.json5（resolution=6.98，offset=(3290, 5990) 以底图左下角为基准），已换算成本工程的左上角原点。**未用现场数据验证**：这张图还没有抓到过对局坐标，点数够（≥12）且覆盖率 ≥90% 时才会被自动认图。 该图目录**没有附带许可证文件**（上游即如此），底图本身源自 Valve 的 CS2 overview 美术资源，版权归 Valve；仅供本机使用，不要再分发。 该图有多层（zRange + splits），目前只画主层底图，下层视角偏移尚未实现。 上游底图 2048×2048（会等比缩放到 1024 参考框，不影响标定）。"
+  }
+}

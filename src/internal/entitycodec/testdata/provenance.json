@@ -1,0 +1,45 @@
+{
+  "demo_sha256": "3bd73aef4ce480a3630813aec402e4492edc9e191d7618cd3e11be2ff0d86f8a",
+  "frames": [
+    {
+      "index": 0,
+      "bytes": 24971,
+      "tick": 0,
+      "is_delta": 0,
+      "delta_from": 0,
+      "server_tick": 0
+    },
+    {
+      "index": 1,
+      "bytes": 24971,
+      "tick": 0,
+      "is_delta": 0,
+      "delta_from": 0,
+      "server_tick": 0
+    },
+    {
+      "index": 2,
+      "bytes": 642,
+      "tick": 1,
+      "is_delta": 1,
+      "delta_from": 6531,
+      "server_tick": 0
+    },
+    {
+      "index": 3,
+      "bytes": 563,
+      "tick": 2,
+      "is_delta": 1,
+      "delta_from": 6532,
+      "server_tick": 0
+    },
+    {
+      "index": 4,
+      "bytes": 541,
+      "tick": 3,
+      "is_delta": 1,
+      "delta_from": 6533,
+      "server_tick": 0
+    }
+  ]
+}

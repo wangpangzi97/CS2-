@@ -1,0 +1,5 @@
+{
+  "endpoint": "https://118.25.176.85/api/verify.php",
+  "app_key": "APP_KEY",
+  "app_id": 0
+}

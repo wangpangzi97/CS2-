@@ -1,0 +1,261 @@
+纯 raw socket 单 exe 版本 —— 验证证据
+时间: 2026-10-16 23:xx
+产物: D:\csleida\1\2026-10-13\rebuild\cs2radar\dist\{capture.exe, CS2雷达.exe, cs2radar-client.zip}
+
+================================================================
+一、这次改了什么
+================================================================
+
+1) 彻底删除 Npcap 后端（internal/pcapdev 重写为纯 raw socket）
+   只保留一条路：
+     socket(AF_INET, SOCK_RAW, IPPROTO_IP)
+       → bind(fd, 本机网卡 IPv4)
+       → WSAIoctl(fd, SIO_RCVALL = 0x98000001, ON)   双向抓包
+       → WSARecvFrom(fd, ...)                        逐包取回
+       → GetExtendedUdpTable(...)                    端口过滤（internal/capturefilter）
+
+   删掉的：wpcap.dll 全部代码、ListDevices(pcap_findalldevs)、SetBuffer、
+   SetMinToCopy、SetFilter/SetLocalUDPFilter、BackendNpcap、ParseBackend、
+   NpcapAvailable、NpcapPath、-backend / -dev 参数。
+   连"只收接收方向"的 ip4:udp 降级路也删了 —— 那条路拿到包也没用（拿不到握手），
+   留着只会让人误以为在正常工作。
+
+2) 新增单文件窗口版 CS2雷达.exe（-H=windowsgui，双击即用，不用 cmd）
+   - ShellExecuteExW("runas") 自提权
+   - 原生 Win32 窗口：状态行 + 日志框 + 「打开雷达页」/「停止并退出」
+   - stderr 重定向到管道 → 日志框（不改抓包代码就能显示日志）
+   - 启动后自动用默认浏览器打开雷达页
+   同一份代码编出两个 exe：
+     capture.exe    subsystem=3（控制台），排障用
+     CS2雷达.exe    subsystem=2（GUI，无控制台窗口）
+
+================================================================
+二、PE 子系统校验（确认窗口版真的没有控制台）
+================================================================
+
+capture.exe      PE32+=True  subsystem=3  WINDOWS_CUI（控制台）
+CS2雷达.exe      PE32+=True  subsystem=2  WINDOWS_GUI（无控制台窗口）
+
+================================================================
+三、Win32 导出名解析（把「调用时才 panic」提前到测试）
+================================================================
+
+$ go test -v -count=1 -run TestWin32ProcsResolve ./cmd/collector/
+=== RUN   TestWin32ProcsResolve
+--- PASS: TestWin32ProcsResolve (0.00s)
+
+覆盖 23 个导出（user32 / gdi32 / shell32 / kernel32），含 ShellExecuteExW、
+SetProcessDpiAwarenessContext、CreateFontW 等。此前被 WSARecvFrom 大小写坑过一次，
+所以专门加这条。
+
+================================================================
+四、窗口版实跑（真进程 + 真窗口）
+================================================================
+
+$ ./CS2雷达.exe -duration 10s -auto-exit -listen 127.0.0.1:8799
+
+运行 4 秒时：
+  $ curl -o /dev/null -w "%{http_code}" http://127.0.0.1:8799/radar?session=room1
+  HTTP 200
+  $ curl http://127.0.0.1:8799/api/v1/radar?session=room1
+  {"session":"room1","players":[],"decoded_msgs":0,"encrypted_frames":0,"scheme":"",...}
+  $ netstat -ano | grep 8799
+  TCP  127.0.0.1:8799  0.0.0.0:0  LISTENING  22236
+
+  $ powershell "Get-Process CS2雷达 | select Id,MainWindowTitle"
+  Id    ProcessName  MainWindowTitle
+  22236 CS2雷达       CS2 雷达          ← 窗口真的建出来了
+
+12 秒后（-duration 10s 到点）：
+  $ netstat -ano | grep "127.0.0.1:8799" | grep LISTENING
+  （空）→ 已自动退出
+
+【期间修掉一个真 bug】第一版窗口关不掉：WM_CLOSE 分支只调了 stopAndQuit()
+却没 DestroyWindow，导致点「停止并退出」/ 自动退出都无效，进程一直挂着。
+修法：WM_CLOSE 里 KillTimer + sess.Stop() + DestroyWindow；真正的收尾
+（sess.Wait）交给消息循环退出后的 run()。重测通过。
+
+================================================================
+五、端口过滤复验（新架构）
+================================================================
+
+$ ./udpprobe.exe -duration 90s -peer 8.8.8.8:53
+PID=24068 PORT1=51981 PORT2=51982 PEER=8.8.8.8:53
+
+$ ./capture.exe -pid 24068 -no-keys -duration 6s -listen 127.0.0.1:8803
+[event] capture_ready  map[filter:true ifaces:3 mode:raw-SIO_RCVALL(双向) proc:cs2.exe]
+[event] capture_filter map[pid:24068 ports:[51981 51982]]
+[event] capture_stats  map[bytes:740062 c2s:889
+                             filter:map[dropped:1006 pid:24068 ports:[51981 51982]]
+                             packets:1056 s2c:167
+                             top_ports:[40045(986) 58427(986) 53(50) 51981(25) 51982(25) 58428(16)]
+                             uplink:map[batches:25 failed:0 packets:50]]
+[event] capture_stats  map[... filtered:1210 final:true packets:1270 ...]
+
+结论：
+  · capture_filter 报出端口 [51981 51982] = 探针实际端口，完全一致
+  · dropped 1210 / packets 1270 → 过滤在丢无关 UDP
+  · uplink packets 60 → 目标流量没被误杀
+  · mode = raw-SIO_RCVALL(双向)，ifaces = 3
+
+================================================================
+六、命令行自检
+================================================================
+
+$ ./capture.exe -selfcheck
+自检：原始套接字(SIO_RCVALL) 可用=true
+✓ 抓包可用，模式 = raw-SIO_RCVALL(双向)，网卡 3 个
+
+$ ./capture.exe -list-devices
+抓包方式: Windows 原始套接字 socket(AF_INET, SOCK_RAW, IPPROTO_IP)
+          + WSAIoctl(fd, SIO_RCVALL=0x98000001) 双向抓包
+          + WSARecvFrom 逐包取回
+          + GetExtendedUdpTable 按目标进程 UDP 端口过滤
+          不依赖 Npcap / wpcap.dll，不需要任何驱动。
+状态: ✓ 可用
+将在这几个网卡地址上开抓包口：
+  以太网                          192.168.1.203
+  VMware Network Adapter VMnet1   192.168.56.1
+  VMware Network Adapter VMnet8   192.168.245.1
+
+================================================================
+七、分发包
+================================================================
+
+zip 内文件: ['cs2radar-client/CS2雷达.exe', 'cs2radar-client/capture.exe',
+             'cs2radar-client/capture.json', 'cs2radar-client/使用说明.txt']
+（**不再有 .bat**）
+
+CS2雷达.exe   6,889,472  sha256 734d6f0ecb50aeb04388472068961f2afc90a60e49df54d24e7de129d7354771
+capture.exe   6,889,472  sha256 ca8f103a7187b9380db26a5aaacc5783c787d0464c5b1b34c8b30e2b524eca84
+capture.json         76  UTF8-noBOM -> PASS
+使用说明.txt       6,757  UTF8-BOM  -> PASS
+编码校验: PASS
+
+干净临时目录解压后：
+  [cli  -replay]                       exit = 0
+    → hkdf-sha256/info-empty|aes-256-gcm|ctr-le-u64|off=2（60/60 帧可解，180 条消息）
+  [gui  -duration 8s -auto-exit]        exit = 0
+
+zip sha256: eb50df9ffaee54056855291fb14d96974afea1ad158c4b5c126b9292b602bad2
+
+================================================================
+八、全量回归
+================================================================
+
+$ gofmt -l .        -> 无输出
+$ go vet ./...      -> exit 0
+$ go test ./...     -> 全部 ok（capturefilter/pcapdev/transport/handshake/cs2crypto/
+                       cs2proto/radarsrv/uplink/license/cmd/collector；keyfind 约 80s）
+
+================================================================
+九、未验证
+================================================================
+
+1. UAC 提权路径未在"非管理员"会话下实测（当前 shell 本身就是管理员，
+   ensureElevated() 直接返回"已是管理员"）。代码路径已就位，
+   ShellExecuteExW 导出名已由 TestWin32ProcsResolve 确认可解析。
+   实测方法：用普通用户登录后双击 CS2雷达.exe，应弹 UAC。
+   >> 见第十节：防死循环分支已补上单元测试；仍未覆盖的只剩"真的弹 UAC 并点是"。
+2. 真实对局下的全链路（本机无 CS2）。
+3. 窗口在高 DPI 下的实际观感（DPI 感知 + Microsoft YaHei UI 字体已就位）。
+
+
+================================================================
+十、复验：补上提权分支测试后重建（2026-10-16 23:2x）
+================================================================
+
+【为什么重建】提权逻辑此前一条测试都没有。本轮在 gui.go 加了一个间接层：
+
+    var isAdminFn = winapiIsAdmin     // 生产路径恒等于 winapiIsAdmin
+    ensureElevated() 改调 isAdminFn()
+
+这样三条分支里两条能离线覆盖，不用真的把自己降成非管理员。
+
+$ go test -v -count=1 -run 'TestEnsureElevated|TestBuildArgLine|TestWin32' ./cmd/collector/
+=== RUN   TestWin32ProcsResolve
+--- PASS: TestWin32ProcsResolve (0.00s)
+=== RUN   TestEnsureElevatedAlreadyAdmin
+--- PASS: TestEnsureElevatedAlreadyAdmin (0.00s)
+=== RUN   TestEnsureElevatedStopsLoopWhenStillNotAdmin
+--- PASS: TestEnsureElevatedStopsLoopWhenStillNotAdmin (0.00s)
+=== RUN   TestBuildArgLine
+--- PASS: TestBuildArgLine (0.00s)
+PASS
+
+其中 TestEnsureElevatedStopsLoopWhenStillNotAdmin 覆盖的是最危险的一条：
+带 -elevated 重入却仍非管理员（用户点了 UAC「否」）→ 必须报错退出，
+绝不能再 ShellExecuteExW 一次，否则就是无限弹 UAC 的死循环。
+该用例刻意只走 flagElevated=true 分支；flagElevated=false 那条会真的弹 UAC，不碰。
+
+TestBuildArgLine 覆盖重入命令行的重建：保留原参数、追加 -elevated、
+带空格的参数（如 "C:\Program Files\..."）必须加引号。
+
+【全量回归】
+
+$ gofmt -l .            -> 无输出
+$ go vet ./...          -> exit 0
+$ go test ./...         -> 全部 ok（含 capturefilter / pcapdev / cmd/collector）
+
+【重建 + PE 子系统】
+
+$ go build -trimpath -ldflags="-s -w" -o dist/capture.exe ./cmd/collector
+$ go build -trimpath -ldflags="-s -w -H=windowsgui -X main.defaultGUIMode=true" -o "dist/CS2雷达.exe" ./cmd/collector
+
+capture.exe   PE32+=True  subsystem=3  WINDOWS_CUI
+CS2雷达.exe   PE32+=True  subsystem=2  WINDOWS_GUI
+
+【窗口版实跑复验】
+
+$ ./CS2雷达.exe -duration 8s -auto-exit -listen 127.0.0.1:8801
+  4 秒时： curl /radar          -> code=200
+           curl /api/v1/radar   -> {"session":"room1","players":[],"decoded_msgs":0,...}
+           netstat              -> TCP 127.0.0.1:8801 LISTENING 2896
+  8 秒后： GUI_EXIT=0；LISTENING 记录消失（只剩 curl 客户端留下的 TIME_WAIT）
+
+$ ./CS2雷达.exe -duration 20s -auto-exit -listen 127.0.0.1:8802   （另起一轮查窗口标题）
+  Get-Process | ? MainWindowTitle -ne '' | select Id,ProcessName,MainWindowTitle
+    Id     ProcessName  MainWindowTitle
+    6676   CS2雷达       CS2 雷达          <- 窗口真的建出来了，不是无窗进程
+
+【命令行自检复验】
+
+$ ./capture.exe -selfcheck
+自检：原始套接字(SIO_RCVALL) 可用=true
+OK 抓包可用，模式 = raw-SIO_RCVALL(双向)，网卡 3 个
+  端口过滤：按目标进程占用的本机 UDP 端口过滤。
+            发现不到端口时不过滤（宁可多收，不可漏收）；-no-filter 可关闭。
+
+$ ./capture.exe -list-devices
+抓包方式: ... + GetExtendedUdpTable 按目标进程 UDP 端口过滤
+          不依赖 Npcap / wpcap.dll，不需要任何驱动。
+状态: OK 可用
+  以太网 192.168.1.203 / VMnet1 192.168.56.1 / VMnet8 192.168.245.1
+
+【干净目录解压复验】
+
+$ unzip -q cs2radar-client.zip -d $TMP && cd $TMP/cs2radar-client
+$ ./capture.exe -replay dist/e2e_final.jsonl -duration 3s
+exit=0
+replay 完成：投递 60 个包；出口=map[batches:1 failed:0 packets:60]
+本机解码：目标 3 个，方案 hkdf-sha256/info-empty|aes-256-gcm|ctr-le-u64|off=2，
+          可解帧 60，消息 180
+  #0 team=0 x=-794.2207 y=913.3321 z=72.0000
+  #1 team=0 x=-253.4602 y=-250.4419 z=80.0000
+  #2 team=0 x=1166.7372 y=168.9123 z=64.0000
+
+【编码复验】
+
+zip 内 4 项：CS2雷达.exe / capture.exe / capture.json / 使用说明.txt
+  capture.json       BOM=False  len=76   UTF8-noBOM  -> PASS
+  使用说明.txt       BOM=True   CRLF=True len=6757 UTF8-BOM    -> PASS
+  zip.testzip()      -> None（无损坏项）
+
+【最终产物哈希（本轮重建）】
+
+CS2雷达.exe   6,889,472  sha256 603bec74877aa735a3bd850ad76fd14278af4b961017a5f7caa95374ec219b07
+capture.exe   6,889,472  sha256 c7cd3150d771013c7c5a71e1eb2825cdaf2535ba0a6746c9be5ef7cf9bd8c05b
+cs2radar-client.zip   5,747,070  sha256 5015c886aec629772146ac9381dca1f4ba22e215d1f4c353b88d79262eef6026
+
+report/cs2radar-client.zip 已同步替换为新包
+（旧包是 .bat 时代的，内含 4 个 .bat + 9,971 字节老说明书，已淘汰）。

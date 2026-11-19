@@ -1,0 +1,44 @@
+[Unit]
+Description=Gamesense device-bound remote radar data service
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=gamesense-radar
+Group=gamesense-radar
+WorkingDirectory=/opt/gamesense-radar/current
+Environment=GUYI_CONFIG_FILE=/etc/gamesense-radar/license-db.php
+Environment=PHP_INI_SCAN_DIR=/etc/php/8.2/cli/conf.d
+ExecStart=/opt/gamesense-radar/current/radarserver -listen 127.0.0.1:18081 -public-origin @@ORIGIN@@ -php-binary @@PHP_BINARY@@ -authority-script /opt/gamesense-radar/current/server/license-authority-cli.php -guyi-project @@GUYI_PROJECT@@ -app-id @@APP_ID@@ -trust-loopback-proxy -mapimg /opt/gamesense-radar/current/maps
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ReadOnlyPaths=/run
+ProtectHome=yes
+InaccessiblePaths=-/etc/guyi-access
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost
+SystemCallArchitectures=native
+LimitNOFILE=4096
+TasksMax=128
+MemoryMax=512M
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

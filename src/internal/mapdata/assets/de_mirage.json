@@ -1,0 +1,38 @@
+{
+  "id": "de_mirage",
+  "display_name": "荒漠迷城",
+  "aliases": [
+    "mirage",
+    "荒漠迷城",
+    "沙漠2号",
+    "mirage2"
+  ],
+  "material": "",
+  "ref_width": 1024,
+  "ref_height": 1024,
+  "origin_world_x": -3240.0,
+  "origin_world_y": 1730.48,
+  "units_per_pixel": 5.02,
+  "world_bounds": {
+    "min_x": -3240.0,
+    "min_y": -3410.0,
+    "max_x": 1900.48,
+    "max_y": 1730.48
+  },
+  "levels": [
+    {
+      "id": "main",
+      "name": "主层",
+      "z_min": -300.0,
+      "z_max": 20.0
+    }
+  ],
+  "anchors": [],
+  "calibration": {
+    "source": "cs2_webradar/meta.json5",
+    "verified": false,
+    "points": 0,
+    "coverage": 0.0,
+    "note": "标定取自上游 meta.json5（resolution=5.02，offset=(3240, 3410) 以底图左下角为基准），已换算成本工程的左上角原点。**未用现场数据验证**：这张图还没有抓到过对局坐标，点数够（≥12）且覆盖率 ≥90% 时才会被自动认图。 该图目录**没有附带许可证文件**（上游即如此），底图本身源自 Valve 的 CS2 overview 美术资源，版权归 Valve；仅供本机使用，不要再分发。 上游底图 2048×2048（会等比缩放到 1024 参考框，不影响标定）。"
+  }
+}

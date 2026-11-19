@@ -1,0 +1,151 @@
+capturefilter 端口过滤 —— 端到端验证证据
+时间: 2026-10-16
+工具: D:\csleida\1\2026-10-13\rebuild\cs2radar\dist\{capture.exe, udpprobe.exe}
+
+================================================================
+一、验证方法
+================================================================
+
+udpprobe.exe 是一个真实进程，打开两个 UDP socket：
+  socket1  bind 到随机端口（不 connect）
+  socket2  connect 到 8.8.8.8:53
+每 200ms 各发一个 64 字节包，产生真实出向/入向 UDP 流量。
+
+capture.exe 用 -pid <探针 PID> 抓包，观察：
+  · capture_filter 事件是否给出正确端口
+  · capture_stats.filter.dropped 是否在丢无关包
+  · uplink.packets 是否仍拿到探针自己的流量（过滤不能把目标流量也丢了）
+
+================================================================
+二、探针
+================================================================
+
+$ ./udpprobe.exe -duration 30s -peer 8.8.8.8:53
+PID=24124 PORT1=52972 PORT2=52973 PEER=8.8.8.8:53
+
+================================================================
+三、实跑（过滤开启，默认）
+================================================================
+
+$ ./capture.exe -backend raw -pid 24124 -no-keys -duration 8s -listen 127.0.0.1:8791
+
+[event] capture_ready  map[backend:raw dev: mode:raw-双向(SIO_RCVALL)]
+[event] capture_filter map[pid:24124 ports:[52972 52973]]
+[event] capture_stats  map[bytes:887835 c2s:1012
+                             filter:map[dropped:1136 pid:24124 ports:[52972 52973]]
+                             packets:1189 s2c:177
+                             top_ports:[58427(1123) 40045(1107) 53(50) 52973(25) 52972(25) 2482(12)]
+                             uplink:map[batches:25 failed:0 packets:53]]
+[event] capture_stats  map[bytes:1376641 c2s:1582 filtered:1774 final:true packets:1857 s2c:275
+                             top_ports:[58427(1751) 40045(1733) 53(80) 52973(40) 52972(40) 58428(16)]]
+
+结论：
+  · capture_filter 报出的端口 = [52972 52973]，与探针实际端口【完全一致】
+    -> GetExtendedUdpTable 的发现逻辑与端口字节序（ntohs）都对
+  · dropped:1136 / packets:1189 -> 过滤确实在剔除无关 UDP（58427/40045 等）
+  · uplink packets:53，且 top_ports 里 52972/52973 计数在涨
+    -> 探针自己的流量【没有】被误杀
+  · 最终 1857 收包 - 1774 丢弃 = 83 进解码出口
+
+================================================================
+四、实跑（-no-filter 逃生口）
+================================================================
+
+$ ./capture.exe -backend raw -pid 24124 -no-keys -no-filter -duration 4s -listen 127.0.0.1:8792
+
+[event] capture_stats map[bytes:639509 c2s:707 filtered:0 final:true packets:839 s2c:132
+                           top_ports:[58427(829) 40045(815) 2580(8) 58428(8) 2482(6) 29991(4)]]
+
+结论：无 capture_filter 事件、filtered:0 -> 逃生口生效，回到"收全部 UDP"。
+
+================================================================
+五、单元测试
+================================================================
+
+$ go test -v -count=1 ./internal/capturefilter/
+--- PASS: TestFilterEmptyPassesEverything (0.00s)
+--- PASS: TestFilterMatch (0.00s)
+--- PASS: TestDiscoverFindsOwnUDPPort (0.00s)
+    filter_test.go:75: 发现本进程 UDP 端口 55528（共 1 个）
+ok  local/cs2-radar/internal/capturefilter  0.139s
+
+================================================================
+六、回放回归（确认改动没碰坏解码链路）
+================================================================
+
+$ ./mksession.exe -out logs/s_verify.jsonl -frames 60 -players 3
+$ ./capture.exe -replay logs/s_verify.jsonl -session demo -listen 127.0.0.1:8793 -hold 1s
+
+[demo] 加解密方案命中: hkdf-sha256/info-empty|aes-256-gcm|ctr-le-u64|off=2 （60/60 帧可解，180 条消息）
+本机解码：目标 3 个
+  #0 team=0 x=-794.2207 y=913.3321 z=72.0000
+  #1 team=0 x=-253.4602 y=-250.4419 z=80.0000
+  #2 team=0 x=1166.7372 y=168.9123 z=64.0000
+
+-> 与真值集合 {1166.7372, -794.2207, -253.4602} 逐位一致。
+
+================================================================
+七、分发包
+================================================================
+
+$ python tools/build_client_package.py
+压缩包 : dist\cs2radar-client.zip 5596781 bytes
+capture.exe sha256: 61012ae3308327ceef8ec51978fbec7071ca3d85260a34c403b2a2726a759517
+zip        sha256: c2a3c4711ebdc4d254dc8a678d18a19ae7c9f04b2949d933d688ed105f604c18
+
+编码校验：
+  capture.json               97  BOM=False            -> PASS
+  仅抓包不读内存.bat          1085  BOM=False GBK-OK     -> PASS
+  使用说明.txt                9971  BOM=True             -> PASS
+  启动雷达-免Npcap.bat        2236  BOM=False GBK-OK     -> PASS
+  启动雷达.bat                2075  BOM=False GBK-OK     -> PASS
+  自检.bat                    1392  BOM=False GBK-OK     -> PASS
+  编码校验: PASS
+
+干净临时目录解压后回放：exit=0，60/60 帧可解，180 条消息。
+
+================================================================
+八、全量回归
+================================================================
+
+$ gofmt -l .        -> 无输出
+$ go vet ./...      -> exit 0
+$ go test ./...     -> 全部 ok（含 keyfind 80.7s）
+
+================================================================
+九、复验（最终 strip 版构建）
+================================================================
+
+首次构建漏了 `-trimpath -ldflags="-s -w"`（正确命令见 agents/E-build-deploy.md:39），
+得到 10,044,928 字节的未 strip 版本 —— 体积翻倍且符号名暴露，属检测足迹倒退。
+用正确参数重建后 capture.exe = 6,895,616 字节，复验如下。
+
+新探针：
+$ ./udpprobe.exe -duration 40s -peer 8.8.8.8:53
+PID=24832 PORT1=51218 PORT2=51219 PEER=8.8.8.8:53
+
+$ ./capture.exe -backend raw -pid 24832 -no-keys -duration 6s -listen 127.0.0.1:8796
+[event] capture_ready  map[backend:raw dev: mode:raw-双向(SIO_RCVALL)]
+[event] capture_filter map[pid:24832 ports:[51218 51219]]
+[event] capture_stats  map[bytes:1025471 c2s:1167
+                             filter:map[dropped:1289 pid:24832 ports:[51218 51219]]
+                             packets:1339 s2c:172
+                             top_ports:[58427(1269) 40045(1269) 53(50) 51219(25) 51218(25) 58428(18)]
+                             uplink:map[batches:25 failed:0 packets:50]]
+[event] capture_stats  map[bytes:1217073 c2s:1388 filtered:1535 final:true packets:1595 s2c:207
+                             top_ports:[58427(1509) 40045(1509) 53(60) 51218(30) 51219(30) 58428(24)]]
+
+$ ./capture.exe -backend raw -pid 24832 -no-keys -no-filter -duration 4s -listen 127.0.0.1:8797
+[event] capture_stats map[bytes:781647 c2s:883 filtered:0 final:true packets:1017 s2c:134
+                           top_ports:[58427(969) 40045(963) 53(40) 51219(20) 51218(20) 2580(8)]]
+
+结论与第三、四节一致：端口发现准确、过滤确实在丢无关包、目标流量未被误杀、逃生口有效。
+
+分发包（最终）：
+  压缩包 : dist\cs2radar-client.zip 2,881,292 bytes
+  capture.exe sha256: ab4bd8a6e4fc1335de8264c0caccd2f32c3bc14ab2722560bf5cdf2a8786cade
+  zip        sha256: 5eb9cff3278aae1e2562e3d0a5ef095844344f3995d800cd99d41e37e735c9e2
+
+  编码校验: PASS（capture.json 无 BOM；4 个 .bat GBK 无 BOM；使用说明.txt UTF-8 BOM）
+  干净临时目录解压回放: exit=0，60/60 帧可解，180 条消息
+

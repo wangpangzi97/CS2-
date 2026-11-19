@@ -1,0 +1,13 @@
+{
+    "secret": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "body": "{\"action\":\"heartbeat\",\"app_key\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"device_hash\":\"fixture-device\"}",
+    "canonical": "v2\nPOST\n\/api\/verify.php\nsession:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\n7\n1800000000\n11111111111111111111111111111111\nde92784df10e6bc2bb3039100641e1d9f9094c4892581c82b41b10c42cdd95c6",
+    "signing_key": "e3ab4a184d40ebee416207cfb7688838bc83a82c8c9c17cae2bd093ad1ad2782",
+    "encryption_key": "e0268b2236e6e8d0a4809a02e646cc03c28226b2256dbf9e1c53aa8cbf5111eb",
+    "signature": "ad539be7fefc54f30d822a895bf3eb739b6026e778ff251b336be554b6b1eb01",
+    "envelope": {
+        "protocol": "v2",
+        "aad": "v2:42:7:11111111111111111111111111111111:200",
+        "encrypted_data": "8TnRO+moL1+uSA0+KCACb1M9TIrbwI\/qd7EJd\/01gLBnGhKJ3M9UyICwpCUHDeXaVFp3mZP2uB5EYO4QwapXDfSv5MlawdMv6nWWjLh1truf1WF6V49kCDvPpfaVs+vp"
+    }
+}

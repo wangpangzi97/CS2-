@@ -1,0 +1,16 @@
+# CANDIDATE ONLY: embed in the loopback-admin server BEFORE generic asset regex.
+# This is not an API/public-vhost include. No PHP or arbitrary uploads are served.
+location ~ "^/media/avatars/(avatar_[0-9a-f]{32}\.png)$" {
+    alias /var/lib/guyi-access/avatars/$1;
+    default_type image/png;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Cache-Control "private, no-store" always;
+}
+location /media/avatars/ { return 404; }
+# Legacy random-avatar URL compatibility; other packaged assets stay unchanged.
+location ~ "^/assets/ResourceStorage/(avatar_[0-9a-f]{32}\.png)$" {
+    alias /var/lib/guyi-access/avatars/$1;
+    default_type image/png;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Cache-Control "private, no-store" always;
+}

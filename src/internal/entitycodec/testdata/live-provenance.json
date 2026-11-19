@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-20",
+  "source_input_provenance": "D:\\王者\\cs雷达分析文件夹\\2026-10-20\\1431客户端修复-143918\\followup-164350\\input-provenance.json",
+  "purpose": "actual live full + two deltas referencing tick74515; independent fresh-base branch comparison; compressed04 fixture",
+  "files": [
+    {
+      "path": "live-74522.pb",
+      "bytes": 396,
+      "sha256": "425c762040962fd4e630ed88494b54ca0e2f19750462996ca13bdd785fe64dcb"
+    },
+    {
+      "path": "live-74523.pb",
+      "bytes": 400,
+      "sha256": "9e4f5b5ca93995583c6a901bc957c64cd9b182cb3a4ba4a5839a327b1e1cd438"
+    },
+    {
+      "path": "live-compressed04.bin",
+      "bytes": 1066,
+      "sha256": "d7fb4c57ea6038c118cfd0746a9336c5b7b0ddc76fd0bf303e6adfababd6844a"
+    },
+    {
+      "path": "live-full.pb",
+      "bytes": 28055,
+      "sha256": "c4970c41d1bea04c2b7e3f5451d62bf74f39b769119a8dc41f0362bd4a238afc"
+    },
+    {
+      "path": "live-serverinfo.pb",
+      "bytes": 7998,
+      "sha256": "e6d38bbde7d28fd3ff6ed3c35d0c6357f146733d426750123b95dbc7dd626b22"
+    }
+  ]
+}

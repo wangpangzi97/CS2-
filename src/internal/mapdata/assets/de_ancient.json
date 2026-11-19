@@ -1,0 +1,37 @@
+{
+  "id": "de_ancient",
+  "display_name": "远古遗迹",
+  "aliases": [
+    "ancient",
+    "远古遗迹",
+    "遗迹"
+  ],
+  "material": "",
+  "ref_width": 1024,
+  "ref_height": 1024,
+  "origin_world_x": -2590.0,
+  "origin_world_y": 1842.24,
+  "units_per_pixel": 4.26,
+  "world_bounds": {
+    "min_x": -2590.0,
+    "min_y": -2520.0,
+    "max_x": 1772.24,
+    "max_y": 1842.24
+  },
+  "levels": [
+    {
+      "id": "main",
+      "name": "主层",
+      "z_min": -95.0,
+      "z_max": 220.0
+    }
+  ],
+  "anchors": [],
+  "calibration": {
+    "source": "cs2_webradar/meta.json5 + 同目录 LICENSE（MIT © 2021 Lexogrine）",
+    "verified": false,
+    "points": 0,
+    "coverage": 0.0,
+    "note": "标定取自上游 meta.json5（resolution=4.26，offset=(2590, 2520) 以底图左下角为基准），已换算成本工程的左上角原点。**未用现场数据验证**：这张图还没有抓到过对局坐标，点数够（≥12）且覆盖率 ≥90% 时才会被自动认图。 上游底图 2048×2048（会等比缩放到 1024 参考框，不影响标定）。"
+  }
+}

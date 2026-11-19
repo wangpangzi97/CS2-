@@ -1,0 +1,61 @@
+{
+  "id": "de_dust2",
+  "display_name": "炙热沙城",
+  "aliases": [
+    "dust2",
+    "炙热沙城",
+    "沙漠2",
+    "d2"
+  ],
+  "material": "overviews/de_dust2_v2",
+  "ref_width": 1024,
+  "ref_height": 1024,
+  "origin_world_x": -2470,
+  "origin_world_y": 3250.6,
+  "units_per_pixel": 4.4,
+  "rotate": 1,
+  "zoom": 1.1,
+  "world_bounds": {
+    "min_x": -2470,
+    "min_y": -1255,
+    "max_x": 2035.6,
+    "max_y": 3250.6
+  },
+  "levels": [
+    {
+      "id": "ground",
+      "name": "地面",
+      "z_min": -400,
+      "z_max": 400
+    }
+  ],
+  "anchors": [
+    {
+      "name": "CTSpawn",
+      "norm_x": 0.62,
+      "norm_y": 0.21
+    },
+    {
+      "name": "TSpawn",
+      "norm_x": 0.39,
+      "norm_y": 0.91
+    },
+    {
+      "name": "bombA",
+      "norm_x": 0.8,
+      "norm_y": 0.16
+    },
+    {
+      "name": "bombB",
+      "norm_x": 0.21,
+      "norm_y": 0.12
+    }
+  ],
+  "calibration": {
+    "source": "valve-overview-txt@pak01_022.vpk@49618294 + cs2_webradar/meta.json5（底图源自 Valve overview 美术，见 maps/底图来源与许可.md）",
+    "verified": false,
+    "points": 4877,
+    "coverage": 0.9977,
+    "note": "沿用本包 meta.json5 对应参数，未修改投影数值；旧声音范围覆盖率不是独立像素标定精度。尚缺同版本控制点和留出点测量，不声明精确标定通过。"
+  }
+}

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>为什么三角洲能纯软路由雷达，而 CS2（完美）必须主机读取</title>
+<style>
+  :root{
+    --bg:#f6f8fb;
+    --surface:#ffffff;
+    --surface-2:#f1f4f9;
+    --line:#e4e8ef;
+    --line-2:#d3dae4;
+    --text:#16202e;
+    --text-2:#48566a;
+    --text-3:#7d8a9c;
+    --brand:#2563eb;
+    --brand-2:#7c3aed;
+    --accent:#0d9488;
+    --warn:#b45309;
+    --ok:#15803d;
+    --danger:#b91c1c;
+    --code-bg:#0f172a;
+    --code-text:#dbe4f0;
+    --radius:16px;
+    --radius-sm:10px;
+    --shadow:0 1px 2px rgba(16,24,40,.05), 0 10px 28px -14px rgba(16,24,40,.22);
+    --shadow-lg:0 2px 6px rgba(16,24,40,.06), 0 24px 56px -24px rgba(16,24,40,.30);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei UI","Microsoft YaHei",sans-serif;
+    font-size:16px;
+    line-height:1.78;
+    letter-spacing:.01em;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px 72px}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;
+    overflow:hidden;
+    background:
+      radial-gradient(1200px 420px at 12% -10%, rgba(56,189,248,.28), transparent 60%),
+      radial-gradient(900px 420px at 92% 0%, rgba(168,85,247,.30), transparent 62%),
+      linear-gradient(160deg,#0b1220 0%,#111c33 55%,#0d1526 100%);
+    color:#eef4ff;
+    padding:64px 20px 58px;
+    margin-bottom:40px;
+    border-bottom:1px solid #0a101c;
+  }
+  .hero::after{
+    content:"";
+    position:absolute;inset:0;
+    background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+    background-size:38px 38px;
+    mask-image:linear-gradient(180deg,rgba(0,0,0,.55),transparent 78%);
+    -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.55),transparent 78%);
+    pointer-events:none;
+  }
+  .hero-inner{position:relative;max-width:900px;margin:0 auto;z-index:1}
+  .kicker{
+    display:inline-flex;align-items:center;gap:9px;
+    font-size:12.5px;font-weight:600;letter-spacing:.16em;
+    text-transform:uppercase;
+    color:#9fd0ff;
+    background:rgba(96,165,250,.12);
+    border:1px solid rgba(96,165,250,.30);
+    padding:7px 14px;border-radius:999px;
+    margin-bottom:22px;
+  }
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:#38bdf8;box-shadow:0 0 0 4px rgba(56,189,248,.18)}
+  .hero h1{
+    margin:0 0 18px;
+    font-size:clamp(26px,4.4vw,40px);
+    line-height:1.32;
+    font-weight:800;
+    letter-spacing:-.01em;
+  }
+  .hero h1 .grad{
+    background:linear-gradient(92deg,#7dd3fc 0%,#a78bfa 48%,#f0abfc 100%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;
+  }
+  .hero p.sub{
+    margin:0;
+    font-size:16.5px;
+    color:#b9c7de;
+    max-width:660px;
+  }
+  .hero .meta{
+    margin-top:26px;padding-top:20px;
+    border-top:1px solid rgba(255,255,255,.10);
+    display:flex;flex-wrap:wrap;gap:10px 26px;
+    font-size:13.5px;color:#8fa3bf;
+  }
+  .hero .meta b{color:#dbe7f8;font-weight:600}
+
+  /* ---------- Typography ---------- */
+  h2{
+    font-size:22px;font-weight:750;line-height:1.4;
+    margin:52px 0 18px;padding-left:15px;
+    border-left:4px solid var(--brand);
+    letter-spacing:-.005em;
+  }
+  h2 .n{
+    display:inline-block;min-width:1.5em;
+    font-family:var(--mono);font-size:.82em;font-weight:700;
+    color:var(--brand);
+  }
+  h3{font-size:17px;font-weight:700;margin:32px 0 12px;color:var(--text)}
+  p{margin:0 0 16px;color:var(--text-2)}
+  strong{color:var(--text);font-weight:700}
+  a{color:var(--brand);text-decoration:none;border-bottom:1px solid rgba(37,99,235,.28)}
+  a:hover{border-bottom-color:var(--brand)}
+  ul,ol{margin:0 0 16px;padding-left:22px;color:var(--text-2)}
+  li{margin:7px 0}
+  li::marker{color:var(--text-3)}
+  code:not(pre code){
+    font-family:var(--mono);
+    font-size:.87em;
+    background:#eaeff7;
+    color:#1e3a8a;
+    border:1px solid #dbe3ee;
+    border-radius:6px;
+    padding:1px 6px;
+    white-space:nowrap;
+  }
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    position:relative;
+    border-radius:var(--radius);
+    padding:22px 24px 22px 26px;
+    margin:26px 0;
+    background:var(--surface);
+    border:1px solid var(--line);
+    box-shadow:var(--shadow);
+  }
+  .callout::before{
+    content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:4px;
+    background:var(--brand);
+  }
+  .callout.tldr::before{background:linear-gradient(180deg,#38bdf8,#7c3aed)}
+  .callout.warn::before{background:var(--warn)}
+  .callout.ok::before{background:var(--ok)}
+  .callout .label{
+    display:block;font-size:12px;font-weight:700;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--text-3);margin-bottom:10px;
+  }
+  .callout p:last-child{margin-bottom:0}
+  .callout .big{
+    font-size:18px;line-height:1.62;font-weight:700;color:var(--text);
+    margin:0 0 6px;
+  }
+  .quote{
+    font-size:17px;line-height:1.7;font-weight:650;color:var(--text);
+    background:linear-gradient(92deg,rgba(37,99,235,.06),rgba(124,58,237,.06));
+    border:1px dashed rgba(37,99,235,.32);
+    border-radius:var(--radius-sm);
+    padding:16px 20px;margin:20px 0;
+  }
+  .quote em{font-style:normal;color:var(--brand)}
+
+  /* ---------- Diagram ---------- */
+  .diagram{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:24px 22px;
+    margin:22px 0 26px;
+  }
+  .diagram .cap{
+    font-size:13px;font-weight:700;color:var(--text-3);
+    letter-spacing:.06em;margin-bottom:16px;
+    display:flex;align-items:center;gap:9px;
+  }
+  .diagram .cap .tag{
+    font-size:11px;font-weight:700;letter-spacing:.08em;
+    padding:3px 9px;border-radius:999px;
+  }
+  .tag.a{background:rgba(13,148,136,.12);color:#0f766e;border:1px solid rgba(13,148,136,.28)}
+  .tag.b{background:rgba(185,28,28,.10);color:#b91c1c;border:1px solid rgba(185,28,28,.26)}
+  .row{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    margin:10px 0;
+  }
+  .node{
+    flex:0 0 auto;
+    border-radius:12px;
+    padding:12px 16px;
+    font-size:13.5px;font-weight:650;line-height:1.45;
+    border:1.5px solid var(--line-2);
+    background:var(--surface-2);
+    color:var(--text);
+    text-align:center;
+    min-width:118px;
+  }
+  .node small{display:block;font-weight:500;font-size:11.5px;color:var(--text-3);margin-top:2px}
+  .node.dev{border-color:#93b4f5;background:#eef4ff;color:#1e40af}
+  .node.router{border-color:#5eead4;background:#e6fffa;color:#0f766e}
+  .node.srv{border-color:#cbd5e1;background:#f8fafc;color:#334155}
+  .node.radar{border-color:#c4b5fd;background:#f5f3ff;color:#6d28d9}
+  .arrow{flex:0 0 auto;color:var(--text-3);font-size:18px;font-weight:700;font-family:var(--mono)}
+  .arrow.down{display:block;text-align:center;margin:6px 0 2px 0}
+  .branch{
+    margin-top:12px;padding:12px 16px;
+    border-left:3px solid var(--accent);
+    background:#f0fdfa;border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+    font-size:13.5px;color:#0f766e;font-weight:600;
+  }
+  .branch.red{border-left-color:var(--danger);background:#fef2f2;color:#b91c1c}
+
+  /* ---------- Table ---------- */
+  .tbl-wrap{overflow-x:auto;margin:22px 0 26px;border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow);background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:520px}
+  thead th{
+    background:var(--surface-2);
+    text-align:left;
+    font-weight:700;font-size:13px;letter-spacing:.03em;
+    color:var(--text-2);
+    padding:14px 18px;
+    border-bottom:1.5px solid var(--line-2);
+    white-space:nowrap;
+  }
+  tbody td{
+    padding:13px 18px;
+    border-bottom:1px solid var(--line);
+    color:var(--text-2);
+    vertical-align:top;
+  }
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:nth-child(even){background:#fbfcfe}
+  tbody td:first-child{color:var(--text);font-weight:600}
+  .yes{color:var(--ok);font-weight:700}
+  .no{color:var(--danger);font-weight:700}
+  .hl{background:rgba(37,99,235,.055)}
+
+  /* ---------- Steps ---------- */
+  .steps{counter-reset:s;list-style:none;padding:0;margin:20px 0 24px}
+  .steps li{
+    counter-increment:s;
+    position:relative;
+    padding:12px 16px 12px 54px;
+    margin:9px 0;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    box-shadow:0 1px 2px rgba(16,24,40,.04);
+    color:var(--text-2);
+  }
+  .steps li::before{
+    content:counter(s);
+    position:absolute;left:14px;top:12px;
+    width:26px;height:26px;border-radius:50%;
+    background:linear-gradient(140deg,var(--brand),var(--brand-2));
+    color:#fff;font-size:13px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);
+  }
+  .steps li b{color:var(--text)}
+
+  /* ---------- Pre ---------- */
+  pre{
+    background:var(--code-bg);
+    color:var(--code-text);
+    border-radius:var(--radius-sm);
+    padding:18px 20px;
+    overflow-x:auto;
+    font-family:var(--mono);
+    font-size:13.5px;
+    line-height:1.72;
+    margin:16px 0 22px;
+    border:1px solid #1e293b;
+    box-shadow:var(--shadow);
+  }
+  pre .c{color:#64748b}
+  pre .k{color:#7dd3fc}
+  pre .s{color:#86efac}
+  pre .n{color:#fca5a5}
+
+  /* ---------- Misc ---------- */
+  .myth{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 22px;margin:14px 0;box-shadow:var(--shadow);
+  }
+  .myth .q{font-weight:750;color:var(--danger);margin:0 0 8px;font-size:15.5px}
+  .myth .a{margin:0;color:var(--text-2)}
+  .myth .a b{color:var(--ok)}
+  hr{border:none;border-top:1px solid var(--line);margin:44px 0}
+  .note{
+    font-size:13.5px;color:var(--text-3);
+    background:var(--surface-2);border:1px dashed var(--line-2);
+    border-radius:var(--radius-sm);padding:16px 20px;margin:26px 0 0;
+  }
+  .note b{color:var(--text-2)}
+  .footer{
+    margin-top:56px;padding-top:26px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+    font-size:13px;color:var(--text-3);
+  }
+  .footer .brandline{display:flex;align-items:center;gap:9px;font-weight:650;color:var(--text-2)}
+  .footer .bar{
+    width:44px;height:5px;border-radius:999px;
+    background:linear-gradient(90deg,#38bdf8,#a78bfa,#f0abfc);
+  }
+  @media (max-width:640px){
+    body{font-size:15.5px}
+    .hero{padding:46px 18px 42px}
+    .wrap{padding:0 15px 56px}
+    .node{min-width:100px;font-size:12.5px;padding:10px 12px}
+    h2{font-size:20px}
+  }
+  @media print{
+    body{background:#fff}
+    .hero{background:#0b1220 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .callout,.diagram,.tbl-wrap,.myth,pre,.steps li{box-shadow:none}
+    h2{page-break-after:avoid}
+    .tbl-wrap,.diagram,.callout{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <span class="kicker"><span class="dot"></span>技术对比 · 游戏雷达</span>
+    <h1>为什么三角洲能做成<span class="grad">「纯软路由雷达」</span><br>而 CS2（完美）必须「主机读取」</h1>
+    <p class="sub">同一件事，两种做法。差异不在技术高低，而在一个很朴素的问题：<b style="color:#dbe7f8">解密游戏流量所需的密钥，到底在哪里。</b></p>
+    <div class="meta">
+      <span><b>主题</b>　网络层雷达 vs 内存层雷达</span>
+      <span><b>证据</b>　CS2 侧为逆向实证 · 三角洲侧为公开资料与原理推断</span>
+      <span><b>日期</b>　2026-10-13</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="callout tldr">
+    <span class="label">结论先行</span>
+    <p class="big">雷达能不能只靠网络层，只取决于一件事：<br>游戏的位置 / 状态数据，在网络层能不能被还原成明文？</p>
+    <p>能 → 抓包 + 协议解析即可 → <b>纯软路由雷达</b>，游戏设备零足迹 —— <b>三角洲</b>。<br>
+       不能 → 必须进入游戏设备，读进程内存（或硬件 DMA）→ <b>主机读取</b> —— <b>CS2 / 完美</b>。</p>
+    <p>三角洲的网络数据包<b>在网络层可解析</b>，所以软路由够用。CS2 的客户端 ↔ 服务器通道是<b>加密</b>的，密钥每次连接临时协商、只存在于 <code>cs2.exe</code> 进程内存里，网络层抓到的是密文 —— 所以<b>没有第二条路</b>。</p>
+  </div>
+
+  <!-- ============ 1 ============ -->
+  <h2><span class="n">01</span>先分清两条路线</h2>
+
+  <p>所有雷达方案，本质上只有两个"落点"：<b>网络层</b>和<b>内存层</b>。</p>
+
+  <div class="diagram">
+    <div class="cap"><span class="tag a">路线 A</span>纯软路由雷达 · 网络层</div>
+    <div class="row">
+      <div class="node dev">游戏设备<small>不装任何东西</small></div>
+      <span class="arrow">→</span>
+      <div class="node router">软路由 / 网关<small>转发 + 抓包 + 解析</small></div>
+      <span class="arrow">→</span>
+      <div class="node srv">游戏服务器</div>
+    </div>
+    <div class="branch">└─ 镜像解析出位置数据 → 展示端（手机 / 网页 / 第二屏）</div>
+  </div>
+
+  <div class="diagram">
+    <div class="cap"><span class="tag b">路线 B</span>主机读取雷达 · 内存层</div>
+    <div class="row">
+      <div class="node dev">游戏设备<small>游戏 + 雷达进程</small></div>
+      <span class="arrow">→</span>
+      <div class="node srv">游戏服务器</div>
+    </div>
+    <div class="branch red">└─ OpenProcess + ReadProcessMemory → 位置数据 / 会话密钥（可配合抓包解密）</div>
+  </div>
+
+  <p>路线 A 的关键是<b>游戏设备零足迹</b>；路线 B 的关键是<b>能读到游戏进程的内存</b>。两者不是替代关系，而是<b>被游戏协议逼出来的不同选择</b>。</p>
+
+  <!-- ============ 2 ============ -->
+  <h2><span class="n">02</span>决定性变量：密钥在哪里</h2>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>对比项</th><th>三角洲</th><th>CS2（完美）</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>网络层抓到的包</td><td class="yes">可解析出位置</td><td class="no">密文</td></tr>
+        <tr class="hl"><td>解密所需信息</td><td>网络层可得（协议逆向即可）</td><td class="no">每会话临时协商的 X25519 私钥，只在进程内存</td></tr>
+        <tr><td>能否纯网络层</td><td class="yes">能</td><td class="no">不能</td></tr>
+        <tr><td>可行路线</td><td>软路由 / 内存 / DMA</td><td>内存 / DMA</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><b>关键点：</b>X25519 是椭圆曲线 Diffie-Hellman。服务器和客户端各自生成<b>临时密钥对</b>，交换<b>公钥</b>，各自算出同一个<b>共享密钥</b>。公钥在网络上是公开的，但 <b>私钥在数学上无法从公钥反推</b> —— 这正是不对称加密的全部意义。</p>
+
+  <div class="quote">
+    你在网络层能看到握手里的 <em>公钥</em>；<br>
+    但你算不出 <em>共享密钥</em>；<br>
+    而客户端进程内存里存着 <em>私钥</em> —— 拿到它就能算出共享密钥，解密全部流量。
+  </div>
+
+  <div class="callout warn">
+    <span class="label">这就是「主机读取」存在的唯一理由</span>
+    <p style="margin:0">不是为了"读坐标方便"，而是因为<b>网络层根本拿不到那把钥匙</b>。</p>
+  </div>
+
+  <!-- ============ 3 ============ -->
+  <h2><span class="n">03</span>三角洲为什么能纯软路由</h2>
+
+  <p>在三角洲的雷达生态里，「软路由雷达」是一个成熟品类，原理被概括为<b>「类 MITM + 数据包解析」</b>，依赖<b>抓包 + 协议逆向</b>。</p>
+
+  <p>能这么做的<b>前提</b>是：位置同步数据在网络层<b>可还原</b>。可能是——</p>
+  <ul>
+    <li>协议明文；或</li>
+    <li>加密但密钥<b>静态 / 可推导</b>；或</li>
+    <li>只对部分字段加密</li>
+  </ul>
+
+  <p>无论哪一种，结果都一样：<b>软路由抓包 → 解析 → 出位置</b>，全程不碰游戏进程。直接好处：</p>
+  <ul>
+    <li><b>游戏设备零足迹</b>：手机上不装任何东西，反作弊在设备上扫不到可疑进程 / 模块 / 内存</li>
+    <li><b>三端通用</b>：手机、平板、PC 只要流量过软路由就能接</li>
+    <li><b>多设备共享</b>：一台软路由可以服务多台设备</li>
+  </ul>
+
+  <!-- ============ 4 ============ -->
+  <h2><span class="n">04</span>CS2（完美）为什么必须主机读取</h2>
+
+  <p>CS2 是 Source 2 引擎，Valve 对客户端 ↔ 服务器的游戏通道做了<b>加密</b>（观战 / GOTV 数据更有独立的 <code>tv_encryptdata_key</code> / <code>cl_decryptdata_key</code> 密钥体系与 <code>svc_EncryptedData</code> 加密消息）。</p>
+
+  <p>我们逆向过一个真实在用的 CS2 雷达客户端（v2.0.5），它的行为把"为什么必须主机读取"写得很清楚：</p>
+
+  <ol class="steps">
+    <li><b>定位 <code>cs2.exe</code></b> —— 250 ms 轮询找进程</li>
+    <li><b>只读打开</b> —— <code>OpenProcess(pid, 0xC10)</code>，即 <code>VM_READ | QUERY_INFORMATION | SUSPEND_RESUME</code></li>
+    <li><b>枚举可读内存区域</b> —— <code>VirtualQueryEx</code></li>
+    <li><b>暴力搜索 32 字节 X25519 私钥</b> —— 三条路径（缓存 hint / 锚点 anchor / 滑动窗口 window）+ 指针链遍历</li>
+    <li><b>校验候选</b> —— 用候选私钥推导公钥，和<b>握手里抓到的公钥</b>逐字节比对</li>
+    <li><b>命中后用私钥解密抓到的包</b> → 得到玩家位置</li>
+  </ol>
+
+  <p><b>为什么非要这么绕？</b>因为<b>没有别的办法</b>：</p>
+  <ul>
+    <li>网络层抓到的是密文</li>
+    <li>密钥在进程内存里，而且每次连接都换</li>
+    <li>所以只能：<b>进入进程 → 拿密钥 → 回来解密</b></li>
+  </ul>
+
+  <div class="callout ok">
+    <span class="label">一句话</span>
+    <p style="margin:0">CS2 的主机读取，本质是为了<b>「偷」那把只存在于内存里的会话密钥</b>。</p>
+  </div>
+
+  <!-- ============ 5 ============ -->
+  <h2><span class="n">05</span>两条路线的对抗面对比</h2>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>维度</th><th>纯软路由（网络层）</th><th>主机读取（内存）</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>游戏设备足迹</td><td class="yes">零</td><td>有外部进程 + 句柄</td></tr>
+        <tr><td>前置条件</td><td>流量可引导 + 协议可解</td><td>密钥 / 数据在内存</td></tr>
+        <tr><td>对延迟的影响</td><td>有（要过转发）</td><td class="yes">无</td></tr>
+        <tr class="hl"><td>反作弊能否在设备上发现</td><td class="yes">基本不能</td><td>用户态 AC 通常不能；<b>内核级 AC 可以</b></td></tr>
+        <tr><td>部署复杂度</td><td>需要额外硬件 / 主机</td><td class="yes">装一个客户端</td></tr>
+        <tr><td>适用游戏</td><td>网络层可解的游戏</td><td>任何能读内存的游戏</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>一个反直觉的点</h3>
+  <p><b>反作弊的强度，反过来决定了雷达形态的选择：</b></p>
+  <ul>
+    <li>CS2 用 <b>VAC</b>（以用户态为主）→ 外部只读进程基本不被管 → <b>主机读取可行</b></li>
+    <li>三角洲用 <b>ACE</b>（腾讯，带内核组件）→ 主机读取风险高 → <b>被逼向网络层</b></li>
+  </ul>
+  <p>所以你会看到：<b>同一个三角洲，既有软路由雷达，也有 DMA 雷达</b>；而 CS2 的雷达几乎清一色是「内存读取 + 外部进程」。</p>
+
+  <!-- ============ 6 ============ -->
+  <h2><span class="n">06</span>四个常见误区</h2>
+
+  <div class="myth">
+    <p class="q">误区 1 ·「软路由雷达更高级」</p>
+    <p class="a">不是。<b>这是协议决定的</b>，不是技术高低。CS2 想做也做不了 —— 除非同时在主机上读内存。</p>
+  </div>
+  <div class="myth">
+    <p class="q">误区 2 ·「主机读取 = 落后」</p>
+    <p class="a">不是。<b>CS2 只有这条路</b>。而且"只读、不注入、不写内存"恰恰是它最安全的形态。</p>
+  </div>
+  <div class="myth">
+    <p class="q">误区 3 ·「软路由雷达可以通吃所有游戏」</p>
+    <p class="a">不能。<b>只要会话密钥是临时协商且只在内存里（如 CS2），网络层就永远拿不到。</b></p>
+  </div>
+  <div class="myth">
+    <p class="q">误区 4 ·「加密只是为了防作弊」</p>
+    <p class="a">不完全是。<b>CS2 加密游戏通道主要是防中间人 / 抓包篡改 / 网络层雷达</b> —— 这是一层独立于反作弊的防护。</p>
+  </div>
+
+  <!-- ============ 7 ============ -->
+  <h2><span class="n">07</span>小结</h2>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>问题</th><th>答案</th></tr></thead>
+      <tbody>
+        <tr><td>三角洲为什么能纯软路由？</td><td>它的位置数据在<b>网络层可解析</b></td></tr>
+        <tr><td>完美为什么必须主机读取？</td><td>它的会话密钥<b>每连接临时协商、只在进程内存</b>，网络层只有密文</td></tr>
+        <tr><td>这是技术差距吗？</td><td>不是，是<b>协议设计差异</b></td></tr>
+        <tr><td>有没有第三条路？</td><td>有，<b>硬件 DMA</b>（直接读物理内存），CS2 和三角洲都能用</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="quote" style="font-size:18px">
+    雷达的形态不由「谁厉害」决定，由「<em>密钥在哪里</em>」决定。<br>
+    <em>密钥在网络上 → 软路由；密钥在内存里 → 主机读取。</em>
+  </div>
+
+  <div class="note">
+    <b>证据等级说明</b><br>
+    · <b>CS2 部分</b>：来自对真实客户端 <code>CS2雷达客户端-v2.0.5.exe</code> 的逆向实证，函数地址、权限常量、算法流程均可复现。<br>
+    · <b>三角洲部分</b>：基于公开资料与协议原理推断，未做逐字节逆向。
+  </div>
+
+  <div class="footer">
+    <span class="brandline"><span class="bar"></span>雷达技术观察</span>
+    <span>2026-10-13 · 网络层 vs 内存层</span>
+  </div>
+
+</main>
+
+</body>
+</html>

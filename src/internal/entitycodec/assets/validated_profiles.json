@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "source": "closed code registry; no dynamic profile negotiation",
+  "sendtables_sha256": "25e6ad5a3c022b30fc6eb60fb8b769f5532dd7071ced9d93008675d74c747e14",
+  "classinfo_sha256": "a4fb437a42e128cc1eaf71a0e5f81148e37213e9908b0a586d9866f52f5daa46",
+  "profiles": [
+    {
+      "protocol": 14191,
+      "build": 10924,
+      "classes": 222,
+      "map": "de_dust2",
+      "demo_sha256": "3bd73aef4ce480a3630813aec402e4492edc9e191d7618cd3e11be2ff0d86f8a",
+      "source": "User-supplied 9219329321613659945_0.dem; no player names/accounts in schema profile."
+    },
+    {
+      "protocol": 14192,
+      "build": 10955,
+      "classes": 222,
+      "map": "de_dust2",
+      "demo_sha256": "769adad78f31856d6b4e8ad8f8b16b77c7393a3b87954787c118d5aa85fc1977",
+      "source": "User-supplied9213136917441438505_0.dem; actual first ServerInfo, header, sendtables and ClassInfo checked; full/delta replay recorded externally; no names/accounts in manifest"
+    }
+  ]
+}

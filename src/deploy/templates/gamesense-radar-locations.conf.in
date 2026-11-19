@@ -1,0 +1,15 @@
+# Include inside the EXISTING IP-HTTPS server only; no listen/certificate/admin changes.
+location = /api/v2/auth/challenge { include /etc/nginx/snippets/gamesense-radar-upstream.conf; }
+location = /api/v2/auth/login { include /etc/nginx/snippets/gamesense-radar-upstream.conf; }
+location = /api/v2/auth/heartbeat { include /etc/nginx/snippets/gamesense-radar-upstream.conf; }
+location = /api/v1/ingest { include /etc/nginx/snippets/gamesense-radar-upstream.conf; }
+location = /api/v1/radar { include /etc/nginx/snippets/gamesense-radar-upstream.conf; }
+location = /api/v1/maps { include /etc/nginx/snippets/gamesense-radar-upstream.conf; }
+location = /api/v1/map { include /etc/nginx/snippets/gamesense-radar-upstream.conf; }
+location ~ ^/mapimg/[a-z0-9_]+/overview\.png$ { include /etc/nginx/snippets/gamesense-radar-upstream.conf; }
+location /mapimg/ { return 403; }
+location /api/v1/ { return 403; }
+location /api/v2/auth/ { return 403; }
+location = /radar { return 403; }
+location = /events { return 403; }
+location = /health { return 404; }

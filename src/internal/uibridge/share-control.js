@@ -1,0 +1,12 @@
+'use strict';
+(()=>{
+ const $=id=>document.getElementById(id);let busy=false;
+ async function api(path,body){const c=new AbortController(),t=setTimeout(()=>c.abort(),2500);try{const r=await fetch(path,{method:body?'POST':'GET',mode:'same-origin',credentials:'same-origin',cache:'no-store',redirect:'error',signal:c.signal,headers:{'X-Gamesense-View':'1',...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});if(!r.ok)throw new Error('操作未通过：检查授权、接口地址、端口和分享设置');return await r.json();}finally{clearTimeout(t);}}
+ function mode(){const lan=$('shareMode').value==='lan';$('shareLAN').hidden=!lan;$('shareTunnel').hidden=lan;}
+ async function status(){try{const r=await api('/share/status'),s=r.share; if(s.active){$('shareMode').value=s.mode;mode();} const sel=$('shareIP'),before=sel.value;if(Array.isArray(r.lan)&&sel.options.length===0){for(const ip of r.lan)sel.append(new Option(ip,ip));if(before)sel.value=before;}$('shareLink').value=s.active?s.link:'';$('shareListen').textContent=s.active?'监听 '+s.listen+' · '+s.viewers+'/'+s.limit+' 个活跃观看端 · 到期 '+new Date(s.expires).toLocaleTimeString():'未开启；默认不监听外部网络';$('shareStart').disabled=s.active||busy;$('shareStop').disabled=!s.active||busy;$('shareCopy').disabled=!s.active;$('shareMode').disabled=s.active;}catch{$('shareResult').textContent='分享状态不可用；不会自动开启端口';}}
+ $('shareMode').onchange=mode;
+ $('shareStart').onclick=async()=>{if(busy)return;busy=true;try{const lan=$('shareMode').value==='lan';await api('/share/start',{mode:lan?'lan':'tunnel',bind_ip:lan?$('shareIP').value:'127.0.0.1',port:Number($('sharePort').value),minutes:Number($('shareMinutes').value),public_origin:lan?'':$('shareOrigin').value.trim(),accept_plain_lan:lan&&$('sharePlain').checked});$('shareResult').textContent='已开启只读分享；持有完整链接的人可观看，请勿公开传播。';}catch(e){$('shareResult').textContent=e.message;}finally{busy=false;await status();}};
+ $('shareStop').onclick=async()=>{if(busy)return;busy=true;try{await api('/share/stop',{});$('shareResult').textContent='已停止分享；旧链接与观看凭证均已撤销。';}catch(e){$('shareResult').textContent=e.message;}finally{busy=false;await status();}};
+ $('shareCopy').onclick=async()=>{try{if(!navigator.clipboard)throw new Error('clipboard');await navigator.clipboard.writeText($('shareLink').value);$('shareResult').textContent='观看链接已复制；不是卡密或主机授权凭据。';}catch{$('shareLink').focus();$('shareLink').select();$('shareResult').textContent='请手动复制选中的完整观看链接。';}};
+ mode();status();setInterval(()=>{if(!document.hidden&&!busy)status();},3000);
+})();
